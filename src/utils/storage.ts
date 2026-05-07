@@ -22,6 +22,7 @@ export const removeData = async (key: string): Promise<void> => {
   try {
     await AsyncStorage.removeItem(key);
   } catch (error) {
+    console.error(`[Storage] removeData error for key "${key}":`, error);
     throw error;
   }
 };

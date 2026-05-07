@@ -7,16 +7,18 @@ import {
   ScrollView,
   Alert,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation';
 import { Colors, wp, hp, GlobalStyles } from '../../constants';
-import { AppText } from '../../components';
+import { AppText, AppButton } from '../../components';
 import { supabase } from '../../services/supabase';
 import { Item } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { getOptimisticFavoriteState } from '../../utils/logic';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Images from '../../constants/Images';
 
 type ItemDetailScreenProps = NativeStackScreenProps<RootStackParamList, 'ItemDetail'>;
 
@@ -108,70 +110,137 @@ const ItemDetailScreen: React.FC<ItemDetailScreenProps> = ({ route, navigation }
   if (!item) return null;
 
   return (
-    <SafeAreaView style={GlobalStyles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <AppText variant="label" color={Colors.primary}>Back</AppText>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={toggleFavorite} disabled={toggling}>
-          <AppText variant="heading3" color={isFavorite ? Colors.secondary : Colors.textMuted}>
-            {isFavorite ? '❤️' : '🤍'}
-          </AppText>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.imagePlaceholder}>
-          <AppText variant="hero">📦</AppText>
+    <View style={styles.container}>
+      <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
+        <View style={styles.heroContainer}>
+          <Image 
+            source={{ uri: item.image_url || Images.defaultItem }} 
+            style={styles.heroImage}
+            resizeMode="cover"
+          />
+          
+          <View style={styles.headerOverlay}>
+            <View style={styles.headerRow}>
+              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
+                <AppText variant="heading2">{'<'}</AppText>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={toggleFavorite} disabled={toggling} style={styles.iconButton}>
+                <AppText variant="heading3" color={isFavorite ? Colors.error : Colors.textSecondary}>
+                  {isFavorite ? '❤️' : '🤍'}
+                </AppText>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
 
-        <View style={styles.info}>
+        <View style={styles.contentContainer}>
           <View style={GlobalStyles.rowBetween}>
-            <AppText variant="heading1" style={{ flex: 1 }}>{item.name}</AppText>
-            <AppText variant="heading2" color={Colors.primary}>
+            <AppText variant="heading1" style={{ flex: 1, marginRight: wp(4) }}>{item.name}</AppText>
+            <AppText variant="hero" color={Colors.primary}>
               {item.price ? `$${item.price}` : ''}
             </AppText>
           </View>
 
-          <AppText variant="label" style={GlobalStyles.mt3}>Description</AppText>
-          <AppText variant="body" style={GlobalStyles.mt1}>
+          <View style={styles.divider} />
+
+          <AppText variant="label" style={styles.sectionTitle}>Description</AppText>
+          <AppText variant="body" style={styles.descriptionText}>
             {item.description}
+          </AppText>
+          
+          {/* Add some dummy content to make the page look fuller */}
+          <AppText variant="label" style={[styles.sectionTitle, GlobalStyles.mt3]}>Features</AppText>
+          <AppText variant="body" style={styles.descriptionText}>
+            • Premium quality materials{'\n'}
+            • Designed for ultimate comfort{'\n'}
+            • 1-year warranty included
           </AppText>
         </View>
       </ScrollView>
-    </SafeAreaView>
+
+      <SafeAreaView style={styles.bottomBar}>
+        <AppButton title="Add to Cart" onPress={() => Alert.alert('Added', `${item.name} added to cart!`)} />
+      </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: Colors.background,
   },
-  header: {
+  heroContainer: {
+    width: '100%',
+    height: hp(45),
+    position: 'relative',
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  },
+  headerOverlay: {
+    position: 'absolute',
+    top: hp(5),
+    left: 0,
+    right: 0,
+  },
+  headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: wp(5),
-    paddingVertical: hp(2),
+    paddingTop: hp(1), // Fallback if SafeAreaView doesn't add enough top padding
   },
-  content: {
-    paddingHorizontal: wp(5),
-    paddingBottom: hp(5),
-  },
-  imagePlaceholder: {
-    width: '100%',
-    height: hp(30),
-    backgroundColor: Colors.backgroundElevated,
-    borderRadius: wp(4),
+  iconButton: {
+    width: wp(12),
+    height: wp(12),
+    borderRadius: wp(6),
+    backgroundColor: Colors.white,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: hp(3),
+    ...GlobalStyles.shadowSm,
   },
-  info: {
+  contentContainer: {
     flex: 1,
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: wp(8),
+    borderTopRightRadius: wp(8),
+    marginTop: -wp(8), // Overlap with image
+    paddingHorizontal: wp(6),
+    paddingTop: hp(4),
+    paddingBottom: hp(12), // Space for bottom bar
+  },
+  divider: {
+    height: 1,
+    backgroundColor: Colors.borderLight,
+    marginVertical: hp(3),
+  },
+  sectionTitle: {
+    color: Colors.textMuted,
+    marginBottom: hp(1),
+  },
+  descriptionText: {
+    color: Colors.textSecondary,
+    lineHeight: 26,
+  },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.white,
+    paddingHorizontal: wp(6),
+    paddingVertical: hp(2),
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+    ...GlobalStyles.shadowMd,
   },
 });
 

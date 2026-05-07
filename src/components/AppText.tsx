@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Text, StyleSheet, TextProps } from 'react-native';
 import { Colors } from '../constants/Colors';
 import { Fonts } from '../constants/Fonts';
@@ -9,7 +9,7 @@ interface AppTextProps extends TextProps {
   align?: 'auto' | 'left' | 'right' | 'center' | 'justify';
 }
 
-export const AppText: React.FC<AppTextProps> = ({
+export const AppText: React.FC<AppTextProps> = memo(({
   children,
   variant = 'body',
   color,
@@ -30,49 +30,61 @@ export const AppText: React.FC<AppTextProps> = ({
       {children}
     </Text>
   );
-};
+});
 
 const styles = StyleSheet.create({
   base: {
     color: Colors.textPrimary,
     fontFamily: Fonts.regular,
+    fontWeight: Fonts.weights.regular,
   },
   hero: {
-    fontSize: 34,
+    fontSize: 40,
     fontFamily: Fonts.bold,
-    lineHeight: 41,
+    fontWeight: Fonts.weights.bold,
+    lineHeight: 48,
+    letterSpacing: -1,
   },
   heading1: {
-    fontSize: 28,
+    fontSize: 32,
     fontFamily: Fonts.bold,
-    lineHeight: 34,
+    fontWeight: Fonts.weights.bold,
+    lineHeight: 40,
+    letterSpacing: -0.5,
   },
   heading2: {
-    fontSize: 22,
+    fontSize: 24,
     fontFamily: Fonts.semibold,
-    lineHeight: 28,
+    fontWeight: Fonts.weights.semibold,
+    lineHeight: 32,
+    letterSpacing: -0.25,
   },
   heading3: {
     fontSize: 18,
     fontFamily: Fonts.semibold,
-    lineHeight: 24,
+    fontWeight: Fonts.weights.semibold,
+    lineHeight: 26,
+    letterSpacing: -0.15,
   },
   body: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    lineHeight: 22,
+    fontWeight: Fonts.weights.regular,
+    lineHeight: 24,
   },
   bodySmall: {
     fontSize: 14,
     fontFamily: Fonts.regular,
+    fontWeight: Fonts.weights.regular,
     lineHeight: 20,
     color: Colors.textSecondary,
   },
   label: {
     fontSize: 12,
     fontFamily: Fonts.medium,
+    fontWeight: Fonts.weights.medium,
     lineHeight: 16,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 1.2,
   },
 });

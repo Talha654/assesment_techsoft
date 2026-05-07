@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 import { Colors } from './Colors';
 import { wp, hp } from './Responsive';
 import { Fonts } from './Fonts';
@@ -14,7 +14,7 @@ export const GlobalStyles = StyleSheet.create({
   screenContainer: {
     flex: 1,
     backgroundColor: Colors.background,
-    paddingHorizontal: wp(5),
+    paddingHorizontal: wp(6),
   },
   centeredContainer: {
     flex: 1,
@@ -35,6 +35,32 @@ export const GlobalStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  shadowSm: {
+    ...Platform.select({
+      ios: {
+        shadowColor: Colors.textPrimary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  shadowMd: {
+    ...Platform.select({
+      ios: {
+        shadowColor: Colors.textPrimary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   mt1: { marginTop: hp(1) },
   mt2: { marginTop: hp(2) },
