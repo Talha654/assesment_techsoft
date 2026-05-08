@@ -14,12 +14,12 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const AppNavigator = () => {
   const { user, loading } = useAuth();
 
+  if (loading) return <SplashScreen />;
+
   return (
     <NavigationContainer linking={linking}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {loading ? (
-          <Stack.Screen name="Splash" component={SplashScreen} />
-        ) : !user ? (
+        {!user ? (
           <Stack.Screen name="Login" component={LoginScreen} />
         ) : (
           <>
