@@ -1,23 +1,18 @@
-import React, { useEffect, useState, useCallback, useMemo, memo } from 'react';
-import {
-  View,
-  FlatList,
-  StyleSheet,
-  ActivityIndicator,
-  RefreshControl,
-  TouchableOpacity,
-  SafeAreaView,
-  Image,
-} from 'react-native';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { FlatList, RefreshControl, SafeAreaView, StyleSheet } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation';
-import { Colors, wp, hp, GlobalStyles } from '../../constants';
-import { AppText, AppButton, AppCard } from '../../components';
+import { Colors, GlobalStyles, wp, hp } from '../../constants';
 import { supabase } from '../../services/supabase';
 import { Item } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Images from '../../constants/Images';
+import ItemListItem from '../../components/ItemsList/ItemListItem';
+import ItemsListHeader from '../../components/ItemsList/ItemsListHeader';
+import EmptyState from '../../components/ItemsList/EmptyState';
+import ErrorState from '../../components/ItemsList/ErrorState';
+import FooterLoader from '../../components/ItemsList/FooterLoader';
+import ContinueBanner from '../../components/ItemsList/ContinueBanner';
 
 type ItemsListNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ItemsList'>;
 
@@ -27,37 +22,6 @@ interface ItemsListScreenProps {
 
 const PAGE_SIZE = 20;
 const LAST_VIEWED_KEY = 'last_viewed_item_id';
-
-// Memoized Item Component to prevent unnecessary re-renders in FlatList
-const ItemListItem = memo(({ item, onPress }: { item: Item; onPress: () => void }) => {
-  return (
-    <AppCard
-      elevated
-      style={styles.itemCard}
-      onTouchEnd={onPress}>
-      <View style={GlobalStyles.row}>
-        <View style={styles.imageContainer}>
-          <Image 
-            source={{ uri: item.image_url || Images.defaultItem }} 
-            style={styles.itemImage}
-            resizeMode="cover"
-          />
-        </View>
-        <View style={styles.itemContent}>
-          <View style={GlobalStyles.rowBetween}>
-            <AppText variant="heading3" style={{ flex: 1 }} numberOfLines={1}>{item.name}</AppText>
-            <AppText variant="heading3" color={Colors.primary}>
-              {item.price ? `$${item.price}` : ''}
-            </AppText>
-          </View>
-          <AppText variant="bodySmall" numberOfLines={2} style={GlobalStyles.mt1}>
-            {item.description}
-          </AppText>
-        </View>
-      </View>
-    </AppCard>
-  );
-});
 
 const ItemsListScreen: React.FC<ItemsListScreenProps> = ({ navigation }) => {
   const { signOut } = useAuth();
@@ -109,13 +73,12 @@ const ItemsListScreen: React.FC<ItemsListScreenProps> = ({ navigation }) => {
 
   useEffect(() => {
     fetchItems(0);
-    checkLastViewed();
+    AsyncStorage.getItem(LAST_VIEWED_KEY).then(setLastViewedId);
   }, [fetchItems]);
 
-  const checkLastViewed = async () => {
-    const id = await AsyncStorage.getItem(LAST_VIEWED_KEY);
-    setLastViewedId(id);
-  };
+  const navigateToDetail = useCallback((id: string) => {
+    navigation.navigate('ItemDetail', { id });
+  }, [navigation]);
 
   const handleLoadMore = useCallback(() => {
     if (!loadingMore && hasMore && !loading) {
@@ -129,52 +92,19 @@ const ItemsListScreen: React.FC<ItemsListScreenProps> = ({ navigation }) => {
     fetchItems(0, true);
   }, [fetchItems]);
 
-  const navigateToDetail = useCallback((id: string) => {
-    navigation.navigate('ItemDetail', { id });
-  }, [navigation]);
-
   const renderItem = useCallback(({ item }: { item: Item }) => (
-    <ItemListItem 
-      item={item} 
-      onPress={() => navigateToDetail(item.id)} 
-    />
+    <ItemListItem item={item} onPress={() => navigateToDetail(item.id)} />
   ), [navigateToDetail]);
 
   const keyExtractor = useCallback((item: Item) => item.id, []);
 
-  const renderFooter = useCallback(() => {
-    if (!loadingMore) return null;
-    return (
-      <View style={styles.footerLoader}>
-        <ActivityIndicator color={Colors.primary} />
-      </View>
-    );
-  }, [loadingMore]);
+  const renderFooter = useCallback(() =>
+    loadingMore ? <FooterLoader /> : null,
+  [loadingMore]);
 
-  const renderEmpty = useCallback(() => {
-    if (loading) {
-      return (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-          <AppText variant="body" style={GlobalStyles.mt2}>Loading items...</AppText>
-        </View>
-      );
-    }
-    return (
-      <View style={styles.centerContainer}>
-        <AppText variant="heading3">No items found</AppText>
-        <AppButton title="Refresh" onPress={() => fetchItems(0)} style={GlobalStyles.mt2} size="sm" variant="outline" />
-      </View>
-    );
-  }, [loading, fetchItems]);
-
-  const renderError = useCallback(() => (
-    <View style={styles.centerContainer}>
-      <AppText variant="heading3" color={Colors.error}>Oops!</AppText>
-      <AppText variant="body" align="center" style={GlobalStyles.mt1}>{error}</AppText>
-      <AppButton title="Try Again" onPress={() => fetchItems(0)} style={GlobalStyles.mt2} size="sm" />
-    </View>
-  ), [error, fetchItems]);
+  const renderEmpty = useCallback(() => (
+    <EmptyState loading={loading} onRefresh={() => fetchItems(0)} />
+  ), [loading, fetchItems]);
 
   const refreshControl = useMemo(() => (
     <RefreshControl
@@ -184,102 +114,42 @@ const ItemsListScreen: React.FC<ItemsListScreenProps> = ({ navigation }) => {
     />
   ), [refreshing, handleRefresh]);
 
+  if (error) {
+    return (
+      <SafeAreaView style={GlobalStyles.safeArea}>
+        <ItemsListHeader onLogout={signOut} />
+        <ErrorState message={error} onRetry={() => fetchItems(0)} />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={GlobalStyles.safeArea}>
-      <View style={styles.header}>
-        <View>
-          <AppText variant="heading1">Discover</AppText>
-          <AppText variant="bodySmall">Premium selections</AppText>
-        </View>
-        <TouchableOpacity onPress={signOut} style={styles.logoutButton}>
-          <AppText variant="label" color={Colors.error}>Log out</AppText>
-        </TouchableOpacity>
-      </View>
+      <ItemsListHeader onLogout={signOut} />
 
       {lastViewedId && (
-        <View style={styles.persistenceBanner}>
-          <AppButton
-            title="Continue exploring"
-            onPress={() => navigateToDetail(lastViewedId)}
-            variant="secondary"
-            size="sm"
-            style={{ borderRadius: wp(10) }}
-          />
-        </View>
+        <ContinueBanner onPress={() => navigateToDetail(lastViewedId)} />
       )}
 
-      {error ? (
-        renderError()
-      ) : (
-        <FlatList
-          data={items}
-          renderItem={renderItem}
-          keyExtractor={keyExtractor}
-          contentContainerStyle={styles.listContent}
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.5}
-          ListFooterComponent={renderFooter}
-          ListEmptyComponent={renderEmpty}
-          refreshControl={refreshControl}
-        />
-      )}
+      <FlatList
+        data={items}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        contentContainerStyle={styles.listContent}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={renderFooter}
+        ListEmptyComponent={renderEmpty}
+        refreshControl={refreshControl}
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: wp(6),
-    paddingTop: hp(2),
-    paddingBottom: hp(3),
-  },
-  logoutButton: {
-    paddingHorizontal: wp(4),
-    paddingVertical: hp(1),
-    borderRadius: wp(5),
-    backgroundColor: Colors.borderLight,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  persistenceBanner: {
-    paddingHorizontal: wp(6),
-    marginBottom: hp(2),
-  },
   listContent: {
     paddingHorizontal: wp(6),
     paddingBottom: hp(5),
-  },
-  itemCard: {
-    marginBottom: hp(2),
-    padding: wp(3), 
-  },
-  imageContainer: {
-    width: wp(20),
-    height: wp(20),
-    borderRadius: wp(3),
-    backgroundColor: Colors.borderLight,
-    overflow: 'hidden',
-    marginRight: wp(4),
-  },
-  itemImage: {
-    width: '100%',
-    height: '100%',
-  },
-  itemContent: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  footerLoader: {
-    paddingVertical: hp(2),
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: hp(20),
   },
 });
 

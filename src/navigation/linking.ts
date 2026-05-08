@@ -12,4 +12,4 @@ const linking: LinkingOptions<RootStackParamList> = {
   },
 };
 
-export default linking;
+export { linking };
